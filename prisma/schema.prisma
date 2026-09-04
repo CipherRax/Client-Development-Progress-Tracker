@@ -1,0 +1,395 @@
+// Client Development Progress Tracker - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum ClientStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProjectStatus {
+  PLANNING
+  REQUIREMENTS
+  IN_PROGRESS
+  AWAITING_CLIENT
+  CLIENT_REVIEW
+  CHANGES_REQUESTED
+  PAUSED
+  DELAYED
+  READY_FOR_TESTING
+  TESTING
+  DEPLOYMENT
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+enum ProjectHealth {
+  ON_TRACK
+  AT_RISK
+  DELAYED
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+  SKIPPED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ChangeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum UpdateVisibility {
+  PUBLIC
+  INTERNAL
+}
+
+enum ActorType {
+  ADMIN
+  SYSTEM
+  CLIENT
+}
+
+enum ActivityEventType {
+  PROJECT_CREATED
+  PROJECT_UPDATED
+  STATUS_CHANGED
+  HEALTH_CHANGED
+  MILESTONE_CREATED
+  MILESTONE_UPDATED
+  MILESTONE_COMPLETED
+  MILESTONE_DELETED
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_COMPLETED
+  TASK_DELETED
+  CHANGE_REQUEST_CREATED
+  CHANGE_REQUEST_APPROVED
+  CHANGE_REQUEST_REJECTED
+  CHANGE_REQUEST_CANCELLED
+  TIME_ADDED
+  PROJECT_PAUSED
+  PROJECT_RESUMED
+  PROJECT_COMPLETED
+  PROJECT_ARCHIVED
+  CLIENT_ACCESS_CREATED
+  CLIENT_ACCESS_REVOKED
+  CLIENT_ACCESS_REGENERATED
+  PUBLIC_UPDATE_CREATED
+  UPDATE_CREATED
+  CURRENT_WORK_UPDATED
+  PROGRESS_OVERRIDDEN
+  CLIENT_CREATED
+  CLIENT_UPDATED
+  CLIENT_ARCHIVED
+  CONTACT_MESSAGE_RECEIVED
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODELS
+// ─────────────────────────────────────────────────────────────
+
+model Admin {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens    RefreshToken[]
+  projectUpdates   ProjectUpdate[]
+  activities       ProjectActivity[]
+
+  @@index([email])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  adminId   String
+  admin     Admin     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  tokenHash String
+  revoked   Boolean   @default(false)
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  @@index([adminId])
+}
+
+model Client {
+  id          String       @id @default(uuid())
+  name        String
+  companyName String?
+  email       String
+  phone       String?
+  notes       String?
+  status      ClientStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  archivedAt  DateTime?
+
+  projects Project[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Project {
+  id       String @id @default(uuid())
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  name        String
+  description String?
+  projectCode String  @unique
+
+  status ProjectStatus @default(PLANNING)
+  health ProjectHealth @default(ON_TRACK)
+
+  startDate                       DateTime
+  originalEstimatedCompletionDate DateTime
+  currentEstimatedCompletionDate  DateTime
+  originalEstimatedDuration       Int // days
+  currentEstimatedDuration        Int // days
+
+  additionalTimeDays Int @default(0)
+  pausedTimeDays     Int @default(0)
+
+  progressPercentage    Float   @default(0)
+  progressManualOverride Boolean @default(false)
+
+  pausedAt    DateTime?
+  pauseReason String?
+  resumedAt   DateTime?
+
+  completedAt DateTime?
+  archivedAt  DateTime?
+
+  clientAccessEnabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  milestones     Milestone[]
+  changeRequests ChangeRequest[]
+  updates        ProjectUpdate[]
+  activities     ProjectActivity[]
+  currentWork    CurrentWork[]
+  clientAccess   ClientAccess[]
+  contactMessages ContactMessage[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([health])
+  @@index([createdAt])
+}
+
+model Milestone {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  order       Int
+  weight      Float           @default(0) // percentage weight of overall project progress
+  status      MilestoneStatus @default(PENDING)
+
+  progressPercentage Float @default(0)
+
+  startDate               DateTime?
+  estimatedCompletionDate DateTime?
+  completedAt             DateTime?
+
+  clientVisible Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks Task[]
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  milestoneId String
+  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  order       Int
+
+  estimatedHours Float?
+  actualHours    Float?
+
+  clientVisible Boolean @default(false)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  @@index([milestoneId])
+  @@index([status])
+}
+
+model ChangeRequest {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  reason      String?
+
+  requestedAt DateTime @default(now())
+  requestedBy String?
+
+  status ChangeRequestStatus @default(PENDING)
+
+  estimatedAdditionalDays  Int   @default(0)
+  estimatedAdditionalHours Float @default(0)
+
+  previousCompletionDate DateTime?
+  newCompletionDate      DateTime?
+
+  clientVisible Boolean @default(false)
+
+  approvedAt DateTime?
+  rejectedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model ProjectUpdate {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title   String
+  content String
+
+  createdById String?
+  createdBy   Admin?  @relation(fields: [createdById], references: [id])
+
+  visibility  UpdateVisibility @default(PUBLIC)
+  publishedAt DateTime         @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([visibility])
+}
+
+model ProjectActivity {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  actorType ActorType
+  actorId   String?
+  admin     Admin?    @relation(fields: [actorId], references: [id])
+
+  eventType   ActivityEventType
+  description String
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([createdAt])
+  @@index([eventType])
+}
+
+model CurrentWork {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title                 String
+  description           String?
+  expectedCompletionDate DateTime?
+  active                Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([active])
+}
+
+model ClientAccess {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  tokenHash String  @unique
+  active    Boolean @default(true)
+
+  createdAt      DateTime  @default(now())
+  revokedAt      DateTime?
+  lastAccessedAt DateTime?
+  expiresAt      DateTime?
+  accessCount    Int       @default(0)
+
+  @@index([projectId])
+  @@index([tokenHash])
+  @@index([active])
+}
+
+model ContactMessage {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name    String
+  email   String
+  message String
+
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([createdAt])
+}
