@@ -50,11 +50,25 @@ const jetbrainsMono = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Client Development Progress Tracker',
-    template: '%s · Client Development Progress Tracker',
+    default: 'Trackly',
+    template: '%s · Trackly',
   },
   description:
-    'Developer-controlled client progress portal. Admins manage projects internally; clients view read-only progress dashboards through secure tokenized links.',
+    'Trackly — developer-controlled client progress portal. Admins manage projects internally; clients view read-only progress dashboards through secure tokenized links.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3002'),
+  openGraph: {
+    title: 'Trackly',
+    description:
+      'Developer-controlled client progress portal. Admins manage projects internally; clients view read-only progress dashboards through secure tokenized links.',
+    siteName: 'Trackly',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Trackly',
+    description:
+      'Developer-controlled client progress portal. Admins manage projects internally; clients view read-only progress dashboards through secure tokenized links.',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

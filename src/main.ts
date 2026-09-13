@@ -35,10 +35,11 @@ async function bootstrap() {
   );
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Client Development Progress Tracker API')
+    .setTitle('Trackly API')
     .setDescription(
-      'Developer-controlled client progress portal. Admins manage projects internally; ' +
-        'clients view read-only progress dashboards through secure tokenized links.',
+      'Trackly — a developer-controlled client progress portal. Admins manage ' +
+        'projects internally; clients view read-only progress dashboards through ' +
+        'secure tokenized links.',
     )
     .setVersion('1.0')
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'admin-jwt')

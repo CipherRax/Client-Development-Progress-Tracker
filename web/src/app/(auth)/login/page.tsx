@@ -57,7 +57,7 @@ export default function LoginPage() {
             id="email"
             type="email"
             autoComplete="email"
-            placeholder="admin@devtracker.dev"
+            placeholder="admin@trackly.dev"
             className={authInputClass}
             {...register('email')}
             aria-invalid={!!errors.email}

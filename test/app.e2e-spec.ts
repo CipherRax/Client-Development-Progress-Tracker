@@ -10,13 +10,13 @@ import { PrismaService } from '../src/database/prisma.service';
 const testDatabaseUrl =
   process.env.TEST_DATABASE_URL ||
   (process.env.DATABASE_URL &&
-    process.env.DATABASE_URL.replace(/client_tracker(?=[?/]|$)/, 'client_tracker_test')) ||
-  'postgresql://tracker:tracker_password@localhost:5433/client_tracker_test?schema=public';
+    process.env.DATABASE_URL.replace(/trackly(?=[?/]|$)/, 'trackly_test')) ||
+  'postgresql://trackly:trackly_password@localhost:5433/trackly_test?schema=public';
 
 process.env.DATABASE_URL = testDatabaseUrl;
 process.env.NODE_ENV = 'test';
 
-describe('Client Development Progress Tracker (e2e)', () => {
+describe('Trackly (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let http: any;
@@ -56,7 +56,7 @@ describe('Client Development Progress Tracker (e2e)', () => {
 
     await cleanDatabase(prisma);
 
-    adminEmail = `e2e-admin-${Date.now()}@devtracker.dev`;
+    adminEmail = `e2e-admin-${Date.now()}@trackly.dev`;
   });
 
   afterAll(async () => {

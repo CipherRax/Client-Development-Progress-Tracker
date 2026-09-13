@@ -27,7 +27,7 @@ export const useAuthStore = create<AuthState>()(
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
     }),
     {
-      name: 'cdpt.auth',
+      name: 'trackly.auth',
       partialize: (s) => ({
         admin: s.admin,
         accessToken: s.accessToken,

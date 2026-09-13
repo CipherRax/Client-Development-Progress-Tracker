@@ -56,10 +56,10 @@ export function AuthShell({
         {/* Brand mark */}
         <div className="mb-7 flex flex-col items-center gap-2.5">
           <div className="flex size-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] font-display text-lg font-bold text-brand shadow-[0_0_30px_rgba(45,212,191,0.25)] backdrop-blur">
-            C
+            T
           </div>
           <p className="font-display text-xs font-semibold tracking-[0.3em] text-white/70 uppercase">
-            CDPT Console
+            Trackly Console
           </p>
         </div>
 

@@ -1,35 +1,35 @@
 services:
-  postgres:
+  trackly-postgres:
     image: postgres:16-alpine
-    container_name: tracker-postgres
+    container_name: trackly-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: tracker
-      POSTGRES_PASSWORD: tracker_password
-      POSTGRES_DB: client_tracker
+      POSTGRES_USER: trackly
+      POSTGRES_PASSWORD: trackly_password
+      POSTGRES_DB: trackly
     ports:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U tracker -d client_tracker']
+      test: ['CMD-SHELL', 'pg_isready -U trackly -d trackly']
       interval: 5s
       timeout: 5s
       retries: 10
 
-  api:
+  trackly-api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: tracker-api
+    container_name: trackly-api
     restart: unless-stopped
     depends_on:
-      postgres:
+      trackly-postgres:
         condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://tracker:tracker_password@postgres:5432/client_tracker?schema=public
+      DATABASE_URL: postgresql://trackly:trackly_password@trackly-postgres:5432/trackly?schema=public
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access-secret}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-secret}
       JWT_ACCESS_EXPIRES_IN: 15m

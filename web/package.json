@@ -1,5 +1,5 @@
 {
-  "name": "client-progress-tracker-web",
+  "name": "trackly-web",
   "version": "1.0.0",
   "private": true,
   "overrides": {
@@ -19,7 +19,6 @@
     "@tanstack/react-query": "^5.66.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "date-fns": "^4.1.0",
     "lucide-react": "^0.474.0",
     "next": "^15.1.6",
     "react": "^19.0.0",
@@ -35,7 +34,6 @@
     "@tailwindcss/postcss": "^4.0.3",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
-    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.10.7",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",

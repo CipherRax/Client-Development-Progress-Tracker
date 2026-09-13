@@ -8,6 +8,7 @@ import { useUiStore } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLogout } from '@/lib/hooks/use-auth';
 import { Button } from '@/components/ui/button';
+import { AdminFooter } from '@/components/shared/footer';
 
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
@@ -53,9 +54,9 @@ export function ApplicationShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-white/[0.07] bg-white/[0.04] px-4 backdrop-blur-xl lg:hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
           <span className="flex size-7 items-center justify-center rounded bg-gradient-to-br from-brand to-brand-strong font-display text-sm font-bold text-white shadow-[0_0_14px_rgba(45,212,191,0.35)]">
-            C
+            T
           </span>
-          <span className="font-display text-sm font-semibold">Tracker Console</span>
+          <span className="font-display text-sm font-semibold">Trackly</span>
         </Link>
         <div className="flex items-center gap-1">
           <button
@@ -80,9 +81,9 @@ export function ApplicationShell({ children }: { children: React.ReactNode }) {
         <div className="flex h-14 items-center justify-between border-b border-white/[0.06] px-5">
           <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setSidebarOpen(false)}>
             <span className="flex size-7 items-center justify-center rounded bg-gradient-to-br from-brand to-brand-strong font-display text-sm font-bold text-white shadow-[0_0_14px_rgba(45,212,191,0.35)]">
-              C
+              T
             </span>
-            <span className="font-display text-sm font-semibold tracking-tight">Tracker Console</span>
+            <span className="font-display text-sm font-semibold tracking-tight">Trackly</span>
           </Link>
           <button
             type="button"
@@ -146,7 +147,7 @@ export function ApplicationShell({ children }: { children: React.ReactNode }) {
           {admin?.email}
         </p>
         <p className="font-mono text-[10px] font-medium uppercase tracking-[0.25em] text-zinc-600">
-          studio console · cdp tracker
+          studio console · trackly
         </p>
       </header>
 
@@ -157,6 +158,7 @@ export function ApplicationShell({ children }: { children: React.ReactNode }) {
 
       <main className="relative lg:pl-64">
         <div className="mx-auto max-w-5xl px-4 py-8 lg:px-8">{children}</div>
+        <AdminFooter />
       </main>
     </div>
   );

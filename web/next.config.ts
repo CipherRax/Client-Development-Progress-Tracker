@@ -1,4 +1,4 @@
-// Next.js 15 configuration for the Client Development Progress Tracker web app.
+// Next.js 15 configuration for the Trackly web app.
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {

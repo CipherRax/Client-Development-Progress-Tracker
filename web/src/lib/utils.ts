@@ -28,5 +28,5 @@ export function formatShortDate(value: string | Date | null | undefined): string
 }
 
 export function copyright(currentYear: number): string {
-  return `${currentYear} Client Development Progress Tracker`;
+  return `${currentYear} Trackly`;
 }

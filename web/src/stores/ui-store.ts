@@ -26,6 +26,6 @@ export const useUiStore = create<UiState>()(
       togglePublicTheme: () => set((s) => ({ publicTheme: s.publicTheme === 'dark' ? 'light' : 'dark' })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
     }),
-    { name: 'cdpt.ui' },
+    { name: 'trackly.ui' },
   ),
 );

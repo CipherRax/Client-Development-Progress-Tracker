@@ -10,20 +10,12 @@ import { contactSchema, type ContactValues } from '@/lib/validation';
 import { usePublicDashboard, useContactForm } from '@/lib/hooks/use-public';
 import { useUiStore } from '@/stores/ui-store';
 import { ProgressRing } from '@/components/shared/progress-ring';
+import { PublicFooter } from '@/components/shared/footer';
 import { cn, formatLedgerDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/skeleton';
 import { EstimateTimeline } from '@/components/admin/project/estimate-timeline';
-
-function toast(msg: string) {
-  const div = document.createElement('div');
-  div.textContent = msg;
-  div.className =
-    'fixed bottom-6 right-6 z-[100] max-w-sm rounded-xl border border-white/10 bg-white/[0.07] px-4 py-2.5 text-sm font-medium text-white shadow-2xl backdrop-blur-xl';
-  document.body.appendChild(div);
-  setTimeout(() => div.remove(), 3000);
-}
 
 function statusLabel(s: string) {
   return s.replace(/_/g, ' ');
@@ -111,7 +103,7 @@ export function PublicDashboard({ token }: { token: string }) {
         {/* Eyebrow + toggle */}
         <div className="flex items-center justify-between">
           <p className="font-mono text-[10px] font-medium uppercase tracking-[0.3em] text-brand/70">
-            client progress tracker
+            trackly · client portal
           </p>
           <button
             type="button"
@@ -277,6 +269,8 @@ export function PublicDashboard({ token }: { token: string }) {
           </p>
           <ContactForm token={token} />
         </GlassPanel>
+
+        <PublicFooter />
       </main>
     </div>
   );
@@ -398,13 +392,9 @@ function ContactForm({ token }: { token: string }) {
   });
 
   const onSubmit = async (values: ContactValues) => {
-    try {
-      await send.mutateAsync(values);
-      toast('Message sent — thanks for reaching out!');
-      reset();
-    } catch {
-      toast('Failed to send message — try again shortly.');
-    }
+    // The mutation hook owns all feedback (sonner toast on success/error).
+    await send.mutateAsync(values);
+    reset();
   };
 
   const fieldInputClass = cn(

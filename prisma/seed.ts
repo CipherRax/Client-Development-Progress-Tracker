@@ -3,19 +3,37 @@ import * as argon2 from 'argon2';
 import { generateSecureToken, hashToken } from '../src/common/utils/secure-token.util';
 import { addDaysUtc } from '../src/common/utils/date.util';
 
+/**
+ * Trackly development seed — creates fictional example data only.
+ *
+ * All records below (clients, projects, milestones, tasks, updates) are
+ * fabricated demo content used to sanity-check the app locally and to onboard
+ * contributors. They do NOT resemble any real client information.
+ *
+ * Safety: this script refuses to run when NODE_ENV is "production" so it can
+ * never be executed against a real deployment. It also never deletes existing
+ * rows, but note that it inserts new clients/projects on every run.
+ */
+if (process.env.NODE_ENV === 'production') {
+  console.error(
+    'Refusing to seed: NODE_ENV=production. The seed script only ever creates fictional example data for local development.',
+  );
+  process.exit(1);
+}
+
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding database...');
+  console.log('Seeding database (fictional example data)...');
 
   // ── Admin ──────────────────────────────────────────────────────────
   const passwordHash = await argon2.hash('DemoPass123!', { type: argon2.argon2id });
   const admin = await prisma.admin.upsert({
-    where: { email: 'admin@devtracker.dev' },
+    where: { email: 'admin@trackly.dev' },
     update: {},
     create: {
       name: 'Demo Developer',
-      email: 'admin@devtracker.dev',
+      email: 'admin@trackly.dev',
       passwordHash,
     },
   });
@@ -372,7 +390,7 @@ async function main() {
 
   console.log('\nSeed complete.\n');
   console.log('Admin login:');
-  console.log('  email:    admin@devtracker.dev');
+  console.log('  email:    admin@trackly.dev');
   console.log('  password: DemoPass123!\n');
   console.log('Live client-access links (raw tokens, shown once — the seed script is the one exception for demo purposes):');
   console.log(`  ${project1.name}: header x-client-access-token: ${rawToken1}`);

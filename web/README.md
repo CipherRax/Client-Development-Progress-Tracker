@@ -1,4 +1,4 @@
-# Client Development Progress Tracker — Web
+# Trackly — Web
 
 Two products, one codebase:
 
@@ -7,7 +7,7 @@ Two products, one codebase:
 
 Stack: Next.js 15 (App Router) · TypeScript (strict) · Tailwind CSS v4 · hand-rolled
 shadcn-style primitives · TanStack Query · React Hook Form + Zod · Zustand ·
-date-fns · Sonner · Vitest + Testing Library · Playwright.
+Sonner · Vitest + Testing Library · Playwright.
 
 See [`DESIGN.md`](./DESIGN.md) for the visual direction ("The Studio Ledger").
 
@@ -73,7 +73,7 @@ npm run test:e2e    # Playwright — requires the API AND this app both running
 
 Playwright specs assume `NEXT_PUBLIC_API_URL` points at a seeded dev API and
 this app on `http://localhost:3002`. The primary environment seed (`npm run
-seed` in the API repo) creates `admin@devtracker.dev` / `DemoPass123!` and
+seed` in the API repo) creates `admin@trackly.dev` / `DemoPass123!` and
 several client-access tokens.
 
 Vitest runs against the components in isolation with mocked API modules —

@@ -1,6 +1,6 @@
-# Client Development Progress Tracker — API
+# Trackly — API
 
-A developer-controlled client progress portal. Admins (developers/agencies) manage
+Trackly is a developer-controlled client progress portal. Admins (developers/agencies) manage
 clients, projects, milestones, tasks, and change requests internally. Each project
 gets a secure, tokenized link that gives the client a **read-only** dashboard of
 their own project — and only their own project.
@@ -112,11 +112,15 @@ npx prisma migrate dev --name init
 npm run seed
 ```
 
-This creates one admin (`admin@devtracker.dev` / `DemoPass123!`), three clients,
+This creates one demo admin (`admin@trackly.dev` / `DemoPass123!`), three clients,
 and three projects in different states (active with an approved change request,
 paused, and completed) with milestones, tasks, updates, and activity history. It
 prints two live client-access tokens at the end so you can try the public API
 immediately.
+
+> All seed records are **fictional example data** for local development only.
+> The script refuses to run when `NODE_ENV=production`, so it can never be
+> applied to a real deployment.
 
 ### 3.5 Run
 
@@ -315,7 +319,7 @@ npm run test:cov       # coverage
 
 > **Important:** the e2e suite wipes every row in its target database. It runs
 > against a **dedicated** database, never the dev/seed one. By default it derives
-> it from `DATABASE_URL` by replacing `client_tracker` → `client_tracker_test`
+> it from `DATABASE_URL` by replacing `trackly` → `trackly_test`
 > (create it and run `npx prisma migrate deploy` with the test URL once),
 > or set `TEST_DATABASE_URL` explicitly.
 
@@ -432,8 +436,8 @@ the public dashboard renders → revoke → the link dies.
 ### Local dev notes (this machine)
 
 - Postgres runs as a **per-user cluster on `localhost:5433`** (data dir
-  `~/.local/share/devtracker-pgdata`, started with
-  `pg_ctl -D ~/.local/share/devtracker-pgdata -l /tmp/opencode/pg-5433.log -o "-p 5433 -h 127.0.0.1 -k /tmp" start`),
+  `~/.local/share/trackly-pgdata`, started with
+  `pg_ctl -D ~/.local/share/trackly-pgdata -l /tmp/opencode/pg-5433.log -o "-p 5433 -h 127.0.0.1 -k /tmp" start`),
   matching `DATABASE_URL` in `.env`. `npx prisma migrate deploy` + `npm run seed`
   were applied there.
 - API: `node dist/main.js` on :3000. Web: `next start -p 3002`. Both are started

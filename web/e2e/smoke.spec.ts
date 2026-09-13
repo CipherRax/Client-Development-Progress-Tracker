@@ -9,7 +9,7 @@ import { test, expect, type APIRequestContext } from '@playwright/test';
  * client-access link → open the public dashboard → revoke it → link dies.
  */
 
-const ADMIN_EMAIL = process.env.PW_ADMIN_EMAIL ?? 'admin@devtracker.dev';
+const ADMIN_EMAIL = process.env.PW_ADMIN_EMAIL ?? 'admin@trackly.dev';
 const ADMIN_PASSWORD = process.env.PW_ADMIN_PASSWORD ?? 'DemoPass123!';
 const API_BASE = process.env.PW_API_BASE ?? 'http://localhost:3000/api/v1';
 
@@ -104,7 +104,7 @@ test.describe.serial('full system smoke', () => {
     // Open the public dashboard fresh (separate context = no admin session).
     const publicPage = await page.context().newPage();
     await publicPage.goto(publicLink);
-    await expect(publicPage.getByText('Client Progress Tracker')).toBeVisible();
+    await expect(publicPage.getByText('Trackly', { exact: false }).first()).toBeVisible();
     await publicPage.close();
 
     const revoke = await request.post(apiUrl(`/projects/${projectId}/client-access/revoke`), { headers });
