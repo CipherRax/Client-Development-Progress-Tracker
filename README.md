@@ -309,18 +309,31 @@ interpretation and document the choice here:
 
 ```bash
 npm run test          # unit tests
-npm run test:e2e       # full e2e suite against a real Postgres (DATABASE_URL)
+npm run test:e2e       # full e2e suite against a dedicated TEST database
 npm run test:cov       # coverage
 ```
 
+> **Important:** the e2e suite wipes every row in its target database. It runs
+> against a **dedicated** database, never the dev/seed one. By default it derives
+> it from `DATABASE_URL` by replacing `client_tracker` → `client_tracker_test`
+> (create it and run `npx prisma migrate deploy` with the test URL once),
+> or set `TEST_DATABASE_URL` explicitly.
+
 The e2e suite (`test/app.e2e-spec.ts`) exercises the full admin lifecycle
-(register → login → refresh → clients → projects → milestones → tasks → change
-requests → status transitions) and then, critically, proves the isolation
-guarantee from spec §57: it generates two tokens for two different clients'
-projects and asserts that each token can only ever see its own project, that
-common tampering attempts (query params, path segments) don't leak the other
-project, that internal-only fields/updates/tasks never appear in the public
-payload, and that revoking/regenerating a link takes effect immediately.
+(register → login → refresh rotation → logout revocation → clients → projects →
+milestones → tasks → change requests → status transitions → pause/resume →
+manual progress override → complete → archive) and then, critically, proves the
+isolation guarantee from spec §57: it generates two tokens for two different
+clients' projects and asserts that each token can only ever see its own project,
+that common tampering attempts (query params, path segments) don't leak the
+other project, that internal-only fields/updates/tasks never appear in the
+public payload, and that revoking/regenerating a link takes effect immediately.
+
+Lifecycle integrity is also asserted: completed projects hold at 100% progress
+even if milestones/tasks change afterwards, reopening a completed task/milestone
+clears its completion timestamp and recomputes progress, pause remembers the
+pre-pause status and resume restores it while extending the ETA by exactly the
+paused days, and cancelled projects reject further lifecycle/milestone changes.
 
 Unit tests cover the calculation-heavy, easy-to-get-subtly-wrong logic in
 isolation: progress weighting and milestone/next-milestone selection, UTC-safe
@@ -338,7 +351,7 @@ Full documentation is generated at `/api/docs` (Swagger UI). High-level surface:
 /api/v1/auth/{register,login,refresh,logout,me}
 /api/v1/profile[/password]
 /api/v1/clients[/:id[/archive]]
-/api/v1/projects[/:id[/status|/health|/pause|/resume|/complete|/archive]]
+/api/v1/projects[/:id[/status|/health|/pause|/resume|/complete|/archive|/progress-override]]
 /api/v1/projects/:projectId/milestones[/reorder]
 /api/v1/milestones/:id[/status]
 /api/v1/milestones/:milestoneId/tasks
@@ -356,3 +369,75 @@ Full documentation is generated at `/api/docs` (Swagger UI). High-level surface:
 Every response is wrapped as `{ success, data, message? }` or, for paginated
 lists, `{ success, data: [...], meta: { page, limit, total, totalPages } }`.
 Errors are `{ success: false, statusCode, error, message, timestamp, path }`.
+
+---
+
+## 12. Web frontend (`web/`)
+
+A hand-built Next.js 15 (App Router) client for both products — the **admin
+console** and the **public client dashboard**.
+
+```
+web/
+├── src/
+│   ├── app/                  Routes: (auth)/login|register, (admin)/dashboard|clients|projects|settings,
+│   │                         p/[token] (public dashboard), p/invalid
+│   ├── components/
+│   │   ├── ui/               Primitives: button, card, input, label, switch, dialog, form, skeleton
+│   │   ├── shared/           Pills (color/icon pairs), ProgressRing, pagination, loading/empty/error states
+│   │   ├── admin/            Console: shell, stat-card, client/project forms, per-tab project panels
+│   │   └── public/           Client-facing dashboard (hero, stepper, timeline, updates, contact)
+│   ├── lib/
+│   │   ├── api/              Typed API client (single-flight refresh) + per-resource modules + Public DTOs
+│   │   ├── validation/       zod schemas mirroring the API's DTOs
+│   │   ├── hooks/            TanStack Query hooks per resource
+│   │   └── presentation.tsx  Single source of truth for status/health/priority color+icon pills
+│   ├── stores/               zustand: auth session (persisted) + UI (theme, sidebar)
+│   └── fonts/                Self-hosted latin-subset woff2 (Inter, Space Grotesk, Fraunces, JetBrains Mono)
+├── e2e/smoke.spec.ts         Full-stack Playwright smoke: login → client/project → public link → revoke
+└── playwright.config.ts
+```
+
+### Design language
+
+"The Studio Ledger": warm paper (`oklch(0.97 0.006 90)`) for the public side,
+dark canvas (`#0B0E12`, panels `#12161C`) for the console, brand teal
+`oklch(0.66 0.13 170)`. Fraunces for the public hero, Space Grotesk for admin
+headings, Inter for body, JetBrains Mono for numbers. Fonts are **vendored** and
+served by `next/font/local` — no external CDN calls at runtime.
+
+### Run
+
+```bash
+cd web
+cp .env.example .env.local     # NEXT_PUBLIC_API_URL, NEXT_PUBLIC_APP_URL
+npm install
+npm run dev                    # http://localhost:3002
+# or:
+npm run build && npm run start
+```
+
+### Tests
+
+```bash
+npm run lint      # eslint --max-warnings 0
+npm run test      # vitest (presentation maps, validation schemas, ProgressRing, pill)
+npm run test:e2e  # Playwright — requires API on :3000 (seeded) + web on :3002
+```
+
+The e2e smoke drives the real stack: admin login → create client + project +
+milestone + task → the console lists it → generate a client-access link →
+the public dashboard renders → revoke → the link dies.
+
+### Local dev notes (this machine)
+
+- Postgres runs as a **per-user cluster on `localhost:5433`** (data dir
+  `~/.local/share/devtracker-pgdata`, started with
+  `pg_ctl -D ~/.local/share/devtracker-pgdata -l /tmp/opencode/pg-5433.log -o "-p 5433 -h 127.0.0.1 -k /tmp" start`),
+  matching `DATABASE_URL` in `.env`. `npx prisma migrate deploy` + `npm run seed`
+  were applied there.
+- API: `node dist/main.js` on :3000. Web: `next start -p 3002`. Both are started
+  detached (`setsid`) to survive shell timeouts.
+- Playwright uses the system Chromium if browsers aren't downloaded
+  (`PW_EXECUTABLE_PATH=/usr/bin/chromium`); it tolerates the version skew via
+  the `executablePath` option rather than Playwright's own browser bundle.

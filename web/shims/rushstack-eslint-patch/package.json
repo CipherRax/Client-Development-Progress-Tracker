@@ -1,0 +1,7 @@
+{
+  "name": "@rushstack/eslint-patch",
+  "version": "1.16.1",
+  "description": "No-op shim: eslint-config-next >=15.5 implements plugin resolution itself; the real patch is incompatible with ESLint 9.39+.",
+  "main": "index.js",
+  "license": "MIT"
+}

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -25,6 +26,10 @@ export class ClientAccessService {
 
   async generate(projectId: string, dto: GenerateClientAccessDto) {
     await this.projectsService.getProjectOrThrow(projectId);
+
+    if (dto.expiresAt) {
+      this.validateExpiry(dto.expiresAt);
+    }
 
     const existingActive = await this.prisma.clientAccess.findFirst({
       where: { projectId, active: true },
@@ -86,6 +91,10 @@ export class ClientAccessService {
 
   async regenerate(projectId: string, dto: GenerateClientAccessDto) {
     await this.projectsService.getProjectOrThrow(projectId);
+
+    if (dto.expiresAt) {
+      this.validateExpiry(dto.expiresAt);
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const active = await tx.clientAccess.findFirst({ where: { projectId, active: true } });
@@ -149,6 +158,16 @@ export class ClientAccessService {
     }
 
     return { access, rawToken };
+  }
+
+  private validateExpiry(expiresAt: string) {
+    const parsed = new Date(expiresAt);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException('expiresAt must be a valid ISO 8601 date.');
+    }
+    if (parsed <= new Date()) {
+      throw new BadRequestException('expiresAt must be a future date.');
+    }
   }
 
   private buildResponse(access: { createdAt: Date; expiresAt: Date | null }, rawToken: string) {

@@ -194,6 +194,7 @@ model Project {
   pausedAt    DateTime?
   pauseReason String?
   resumedAt   DateTime?
+  pausedFromStatus ProjectStatus?
 
   completedAt DateTime?
   archivedAt  DateTime?

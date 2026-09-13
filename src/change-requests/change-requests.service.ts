@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ActivityEventType, ActorType, ChangeRequestStatus } from '@prisma/client';
+import { ActivityEventType, ActorType, ChangeRequestStatus, ProjectStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { ActivityService } from '../activity/activity.service';
 import { ProjectsService } from '../projects/projects.service';
@@ -118,9 +118,24 @@ export class ChangeRequestsService {
         throw new NotFoundException('Change request not found.');
       }
 
+      const project = await tx.project.findUnique({
+        where: { id: changeRequest.projectId },
+        select: { status: true, currentEstimatedCompletionDate: true },
+      });
+      if (
+        !project ||
+        project.status === ProjectStatus.COMPLETED ||
+        project.status === ProjectStatus.CANCELLED ||
+        project.status === ProjectStatus.ARCHIVED
+      ) {
+        throw new BadRequestException(
+          `Change requests cannot be approved while the project is in its ${project?.status} state.`,
+        );
+      }
+
       const guarded = await tx.changeRequest.updateMany({
         where: { id, status: ChangeRequestStatus.PENDING },
-        data: { status: ChangeRequestStatus.APPROVED }, // placeholder, finalized below
+        data: { status: ChangeRequestStatus.APPROVED },
       });
       if (guarded.count === 0) {
         throw new ConflictException(
@@ -128,9 +143,7 @@ export class ChangeRequestsService {
         );
       }
 
-      const previousCompletionDate = (
-        await tx.project.findUniqueOrThrow({ where: { id: changeRequest.projectId } })
-      ).currentEstimatedCompletionDate;
+      const previousCompletionDate = project.currentEstimatedCompletionDate;
 
       const updatedProject = await this.projectsService.addAdditionalTime(
         changeRequest.projectId,

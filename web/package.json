@@ -1,0 +1,54 @@
+{
+  "name": "client-progress-tracker-web",
+  "version": "1.0.0",
+  "private": true,
+  "overrides": {
+    "@rushstack/eslint-patch": "file:./shims/rushstack-eslint-patch"
+  },
+  "scripts": {
+    "dev": "next dev -p 3002",
+    "build": "next build",
+    "start": "next start -p 3002",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^3.10.0",
+    "@tanstack/react-query": "^5.66.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.474.0",
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.54.2",
+    "sonner": "^1.7.3",
+    "tailwind-merge": "^2.6.0",
+    "zod": "^3.24.1",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@tailwindcss/postcss": "^4.0.3",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^22.10.7",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.18.0",
+    "eslint-config-next": "^15.5.25",
+    "jsdom": "^26.0.0",
+    "tailwindcss": "^4.0.3",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  },
+  "allowScripts": {
+    "esbuild@0.21.5": true,
+    "unrs-resolver@1.12.2": true
+  }
+}

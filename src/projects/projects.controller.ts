@@ -18,6 +18,7 @@ import { ChangeProjectStatusDto } from './dto/change-status.dto';
 import { ChangeProjectHealthDto } from './dto/change-health.dto';
 import { PauseProjectDto } from './dto/pause-project.dto';
 import { CompleteProjectDto } from './dto/complete-project.dto';
+import { ProgressOverrideDto } from './dto/progress-override.dto';
 
 @ApiTags('Projects')
 @ApiBearerAuth()
@@ -73,6 +74,23 @@ export class ProjectsController {
   @Post(':id/archive')
   archive(@Param('id', ParseUUIDPipe) id: string) {
     return this.projectsService.archive(id);
+  }
+
+  @Post(':id/progress-override')
+  setProgressOverride(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ProgressOverrideDto,
+  ) {
+    return this.projectsService.setProgressOverride(
+      id,
+      dto.progressPercentage,
+      dto.reason,
+    );
+  }
+
+  @Delete(':id/progress-override')
+  clearProgressOverride(@Param('id', ParseUUIDPipe) id: string) {
+    return this.projectsService.clearProgressOverride(id);
   }
 
   @Delete(':id')

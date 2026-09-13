@@ -8,6 +8,7 @@ import { ActivityEventType, ActorType, MilestoneStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { ActivityService } from '../activity/activity.service';
 import { ProjectsService } from '../projects/projects.service';
+import { ProgressCalculationService } from '../projects/services/progress-calculation.service';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
 import { UpdateMilestoneStatusDto } from './dto/update-milestone-status.dto';
@@ -19,10 +20,11 @@ export class MilestonesService {
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
     private readonly projectsService: ProjectsService,
+    private readonly progressCalc: ProgressCalculationService,
   ) {}
 
   async create(projectId: string, dto: CreateMilestoneDto) {
-    await this.projectsService.getProjectOrThrow(projectId);
+    await this.projectsService.assertProjectMutable(projectId);
 
     let order = dto.order;
     if (order === undefined) {
@@ -89,6 +91,7 @@ export class MilestonesService {
 
   async update(id: string, dto: UpdateMilestoneDto) {
     const milestone = await this.getMilestoneOrThrow(id);
+    await this.projectsService.assertProjectMutable(milestone.projectId);
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const result = await tx.milestone.update({
@@ -129,17 +132,39 @@ export class MilestonesService {
 
   async updateStatus(id: string, dto: UpdateMilestoneStatusDto) {
     const milestone = await this.getMilestoneOrThrow(id);
+    await this.projectsService.assertProjectMutable(milestone.projectId);
 
     const becomingCompleted =
       dto.status === MilestoneStatus.COMPLETED && milestone.status !== MilestoneStatus.COMPLETED;
+    const leavingCompleted =
+      milestone.status === MilestoneStatus.COMPLETED && dto.status !== MilestoneStatus.COMPLETED;
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      // When re-opening a completed milestone, restore its progress from its
+      // tasks instead of leaving it stuck at 100%.
+      let reopenedProgress: number | undefined;
+      if (leavingCompleted) {
+        const tasks = await tx.task.findMany({ where: { milestoneId: id } });
+        reopenedProgress = this.progressCalc.calculateMilestoneProgress(
+          tasks,
+          milestone.progressPercentage,
+        );
+      }
+
       const result = await tx.milestone.update({
         where: { id },
         data: {
           status: dto.status,
-          progressPercentage: becomingCompleted ? 100 : milestone.progressPercentage,
-          completedAt: becomingCompleted ? new Date() : milestone.completedAt,
+          progressPercentage: becomingCompleted
+            ? 100
+            : leavingCompleted
+              ? reopenedProgress
+              : milestone.progressPercentage,
+          completedAt: becomingCompleted
+            ? new Date()
+            : leavingCompleted
+              ? null
+              : milestone.completedAt,
         },
       });
 
@@ -164,7 +189,7 @@ export class MilestonesService {
   }
 
   async reorder(projectId: string, dto: ReorderMilestonesDto) {
-    await this.projectsService.getProjectOrThrow(projectId);
+    await this.projectsService.assertProjectMutable(projectId);
 
     const existing = await this.prisma.milestone.findMany({ where: { projectId } });
     const existingIds = new Set(existing.map((m) => m.id));
@@ -195,6 +220,7 @@ export class MilestonesService {
     if (!milestone) {
       throw new NotFoundException('Milestone not found.');
     }
+    await this.projectsService.assertProjectMutable(milestone.projectId);
 
     if (milestone._count.tasks > 0) {
       throw new ConflictException(

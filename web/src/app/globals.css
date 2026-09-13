@@ -1,0 +1,192 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: var(--font-space-grotesk);
+  --font-serif-display: var(--font-fraunces);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+
+  --color-brand: oklch(0.66 0.13 170);
+  --color-brand-strong: oklch(0.55 0.14 170);
+  --color-brand-soft: oklch(0.93 0.05 170);
+
+  --color-ink: oklch(0.2 0.02 220);
+  --color-paper: oklch(0.97 0.006 90);
+  --color-paper-deep: oklch(0.94 0.008 90);
+
+  --color-amber: oklch(0.75 0.15 75);
+  --color-danger: oklch(0.6 0.2 25);
+  --color-info: oklch(0.6 0.13 250);
+  --color-success: oklch(0.7 0.14 150);
+  --color-plum: oklch(0.58 0.16 295);
+  --color-slate-n: oklch(0.47 0.02 240);
+
+  --color-canvas: oklch(0.16 0.015 240);
+  --color-panel: oklch(0.2 0.02 240);
+  --color-panel-raised: oklch(0.24 0.02 240);
+  --color-line: oklch(0.31 0.02 240);
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --animate-float: float 9s ease-in-out infinite;
+  --animate-float-slow: float 15s ease-in-out infinite;
+  --animate-pulse-glow: pulse-glow 3.4s ease-in-out infinite;
+  --animate-fade-up: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-in: fade-in 0.9s ease both;
+  --animate-drift: drift 22s ease-in-out infinite alternate;
+  --animate-drift-slow: drift 36s ease-in-out infinite alternate;
+  --animate-scan: scan 6s linear infinite;
+  --animate-shimmer: shimmer 2.6s linear infinite;
+  --animate-spin-slow: spin 30s linear infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-18px); }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.06); }
+  }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes drift {
+    0% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(40px, -30px) scale(1.15); }
+    100% { transform: translate(-30px, 24px) scale(0.95); }
+  }
+
+  @keyframes scan {
+    0% { top: -10%; opacity: 0; }
+    8% { opacity: 1; }
+    92% { opacity: 1; }
+    100% { top: 110%; opacity: 0; }
+  }
+
+  @keyframes shimmer {
+    from { background-position: -200% 0; }
+    to { background-position: 200% 0; }
+  }
+}
+
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-paper text-ink antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  .dark body {
+    @apply bg-canvas text-zinc-100;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  /* Native dropdown popups must respect the colour scheme so the options
+     list is never invisible ("white on white"). The wrapper also carries
+     `.scheme-dark` in forced-dark scenes (auth, public dashboard). */
+  select {
+    color-scheme: light;
+  }
+  .dark select,
+  .scheme-dark select {
+    color-scheme: dark;
+  }
+  select option {
+    background-color: #ffffff;
+    color: var(--color-ink);
+  }
+  .dark select option,
+  .scheme-dark select option {
+    background-color: var(--color-panel-raised);
+    color: #e4e4e7;
+  }
+}
+
+@layer utilities {
+  .font-mono-num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Fine technical grid used behind the auth + public developer "console". */
+  .bg-grid-dark {
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+    background-size: 46px 46px;
+  }
+
+  .bg-grid-soft {
+    background-image:
+      linear-gradient(to right, rgb(0 0 0 / 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(0 0 0 / 0.035) 1px, transparent 1px);
+    background-size: 46px 46px;
+  }
+
+  .mask-fade {
+    mask-image: linear-gradient(180deg, black 20%, transparent 92%);
+    -webkit-mask-image: linear-gradient(180deg, black 20%, transparent 92%);
+  }
+
+  .mask-fade-y {
+    mask-image: linear-gradient(90deg, transparent 0%, black 35%, black 65%, transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 35%, black 65%, transparent 100%);
+  }
+
+  /* Soft brand word-glow for the developer-console heroes. */
+  .text-glow {
+    text-shadow: 0 0 24px oklch(0.66 0.13 170 / 0.45), 0 0 2px oklch(0.66 0.13 170 / 0.6);
+  }
+
+  .scheme-dark {
+    color-scheme: dark;
+  }
+}
+
+/* Thin, subtle scrollbars for the technical console. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line) transparent;
+}
+
+::selection {
+  background: var(--color-brand);
+  color: white;
+}

@@ -267,6 +267,12 @@ export class ProjectsService {
   async changeHealth(id: string, dto: ChangeProjectHealthDto) {
     const project = await this.getProjectOrThrow(id);
 
+    if (TERMINAL_STATUSES.includes(project.status)) {
+      throw new BadRequestException(
+        `Project is ${project.status}. Health cannot be changed on a closed project.`,
+      );
+    }
+
     const updated = await this.prisma.project.update({
       where: { id },
       data: { health: dto.health },
@@ -300,6 +306,7 @@ export class ProjectsService {
         pausedAt: new Date(),
         pauseReason: dto.reason,
         resumedAt: null,
+        pausedFromStatus: project.status,
       },
     });
 
@@ -331,12 +338,18 @@ export class ProjectsService {
       pausedTimeDays: newPausedTimeDays,
     });
 
+    const resumedStatus =
+      project.pausedFromStatus && project.pausedFromStatus !== ProjectStatus.PAUSED
+        ? project.pausedFromStatus
+        : ProjectStatus.IN_PROGRESS;
+
     const updated = await this.prisma.project.update({
       where: { id },
       data: {
-        status: ProjectStatus.IN_PROGRESS,
+        status: resumedStatus,
         resumedAt: new Date(),
         pausedTimeDays: newPausedTimeDays,
+        pausedFromStatus: null,
         currentEstimatedCompletionDate: timeline.currentEstimatedCompletionDate,
         currentEstimatedDuration: timeline.currentEstimatedDuration,
       },
@@ -361,6 +374,9 @@ export class ProjectsService {
     }
     if (project.status === ProjectStatus.ARCHIVED) {
       throw new BadRequestException('Cannot complete an archived project.');
+    }
+    if (project.status === ProjectStatus.CANCELLED) {
+      throw new BadRequestException('Cannot complete a cancelled project.');
     }
 
     const milestones = await this.prisma.milestone.findMany({ where: { projectId: id } });
@@ -462,6 +478,15 @@ export class ProjectsService {
       return project;
     }
 
+    // A completed project is always 100% complete regardless of any later
+    // milestone/task edits. Prevent historical progress from drifting.
+    if (project.status === ProjectStatus.COMPLETED) {
+      return client.project.update({
+        where: { id: projectId },
+        data: { progressPercentage: 100 },
+      });
+    }
+
     const milestones = await client.milestone.findMany({ where: { projectId } });
     const progress = this.progressCalc.calculateProjectProgress(milestones);
 
@@ -469,6 +494,91 @@ export class ProjectsService {
       where: { id: projectId },
       data: { progressPercentage: progress },
     });
+  }
+
+  /**
+   * Sets (or replaces) a manual progress override. The override disables
+   * automatic progress calculation for the project and is recorded in the
+   * activity history. Pass a new value to set/update it; the explicit
+   * clearProgressOverride() call removes it.
+   */
+  async setProgressOverride(projectId: string, progress: number, reason?: string) {
+    const project = await this.getProjectOrThrow(projectId);
+    const clamped = Math.min(100, Math.max(0, progress));
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.project.update({
+        where: { id: projectId },
+        data: {
+          progressPercentage: clamped,
+          progressManualOverride: true,
+        },
+      });
+
+      await this.activity.record(
+        {
+          projectId,
+          eventType: ActivityEventType.PROGRESS_OVERRIDDEN,
+          description: `Manual progress override set to ${clamped}%. Automatic calculation disabled.${reason ? ` Reason: ${reason}` : ''}`,
+          actorType: ActorType.ADMIN,
+          metadata: { progress: clamped, reason, previousProgress: project.progressPercentage },
+        },
+        tx,
+      );
+
+      return result;
+    });
+
+    return updated;
+  }
+
+  async clearProgressOverride(projectId: string) {
+    const project = await this.getProjectOrThrow(projectId);
+
+    if (!project.progressManualOverride) {
+      throw new BadRequestException('This project does not have a manual progress override.');
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.project.update({
+        where: { id: projectId },
+        data: { progressManualOverride: false },
+      });
+
+      await this.activity.record(
+        {
+          projectId,
+          eventType: ActivityEventType.PROGRESS_OVERRIDDEN,
+          description: 'Manual progress override cleared. Automatic calculation resumed.',
+          actorType: ActorType.ADMIN,
+          metadata: { cleared: true, previousProgress: project.progressPercentage },
+        },
+        tx,
+      );
+
+      return result;
+    });
+
+    await this.recalculateProjectProgress(projectId);
+    return updated;
+  }
+
+  /**
+   * Guards mutations against projects that have been closed permanently.
+   * Completed projects remain editable (e.g. to add final notes) but their
+   * progress stays locked at 100% by recalculateProjectProgress.
+   */
+  async assertProjectMutable(id: string) {
+    const project = await this.getProjectOrThrow(id);
+    if (
+      project.status === ProjectStatus.CANCELLED ||
+      project.status === ProjectStatus.ARCHIVED
+    ) {
+      throw new BadRequestException(
+        `Project is ${project.status} and can no longer be modified.`,
+      );
+    }
+    return project;
   }
 
   /**

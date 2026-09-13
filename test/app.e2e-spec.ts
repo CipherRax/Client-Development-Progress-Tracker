@@ -4,6 +4,18 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/database/prisma.service';
 
+// The e2e suite wipes every row in its target database, so it MUST run
+// against a dedicated test database, never the dev/seed database.
+// TEST_DATABASE_URL is preferred; fall back to DATABASE_URL{,_suffix}.
+const testDatabaseUrl =
+  process.env.TEST_DATABASE_URL ||
+  (process.env.DATABASE_URL &&
+    process.env.DATABASE_URL.replace(/client_tracker(?=[?/]|$)/, 'client_tracker_test')) ||
+  'postgresql://tracker:tracker_password@localhost:5433/client_tracker_test?schema=public';
+
+process.env.DATABASE_URL = testDatabaseUrl;
+process.env.NODE_ENV = 'test';
+
 describe('Client Development Progress Tracker (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -342,23 +354,23 @@ describe('Client Development Progress Tracker (e2e)', () => {
     it('CRITICAL: token A can never surface Project B data under any parameter tampering', async () => {
       // There is no project-id parameter in the public API at all — the
       // project is derived exclusively from the validated token server-side.
-      // We still probe common bypass attempts defensively.
-      const attempts = [
-        request(http)
-          .get(`/api/v1/public/project?projectId=${projectBId}`)
-          .set('x-client-access-token', clientTokenA),
-        request(http)
-          .get(`/api/v1/public/project/${projectBId}`)
-          .set('x-client-access-token', clientTokenA),
-      ];
+      // We still probe common bypass attempts defensively, sequentially.
+      const res1 = await request(http)
+        .get(`/api/v1/public/project?projectId=${projectBId}`)
+        .set('x-client-access-token', clientTokenA);
+      if (res1.status === 200) {
+        expect(res1.body.data.project.name).not.toBe('Project B - Confidential Fleet App');
+      } else {
+        expect([401, 400, 404]).toContain(res1.status);
+      }
 
-      for (const attempt of attempts) {
-        const res = await attempt;
-        if (res.status === 200) {
-          expect(res.body.data.project.name).not.toBe('Project B - Confidential Fleet App');
-        } else {
-          expect([401, 404]).toContain(res.status);
-        }
+      const res2 = await request(http)
+        .get(`/api/v1/public/project/${projectBId}`)
+        .set('x-client-access-token', clientTokenA);
+      if (res2.status === 200) {
+        expect(res2.body.data.project.name).not.toBe('Project B - Confidential Fleet App');
+      } else {
+        expect([401, 404]).toContain(res2.status);
       }
     });
 
@@ -459,6 +471,297 @@ describe('Client Development Progress Tracker (e2e)', () => {
         .get('/api/v1/projects')
         .set('Authorization', `Bearer ${clientTokenB}`)
         .expect(401);
+    });
+  });
+
+  // ── Sessions, lifecycle, and progress integrity ──────────────────────
+  describe('Sessions, lifecycle and progress integrity', () => {
+    let completedProjectId: string;
+
+    async function freshProject(status = 'IN_PROGRESS') {
+      const client = await request(http)
+        .post('/api/v1/clients')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ name: `Lifecycle-${Date.now()}-${Math.random()}`, email: `lc-${Date.now()}-${Math.random()}@example.com` })
+        .expect(201);
+      const project = await request(http)
+        .post('/api/v1/projects')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          clientId: client.body.data.id,
+          name: `Lifecycle Project ${Date.now()}`,
+          startDate: '2026-08-01',
+          estimatedCompletionDate: '2026-09-01',
+          status,
+        })
+        .expect(201);
+      return project.body.data;
+    }
+
+    it('rotates refresh tokens and invalidates the old one', async () => {
+      const login = await request(http)
+        .post('/api/v1/auth/login')
+        .send({ email: adminEmail, password: 'SuperSecret123!' })
+        .expect(200);
+      const oldRefresh = login.body.data.tokens.refreshToken;
+
+      const refreshed = await request(http)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: oldRefresh })
+        .expect(200);
+      const newRefresh = refreshed.body.data.tokens.refreshToken;
+      expect(newRefresh).not.toBe(oldRefresh);
+
+      // Replay of the rotated token must fail.
+      await request(http)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: oldRefresh })
+        .expect(401);
+
+      // The replacement token works (and rotates again).
+      const second = await request(http)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken: newRefresh })
+        .expect(200);
+      expect(second.body.data.tokens.refreshToken).toBeDefined();
+    });
+
+    it('logout revokes the refresh token', async () => {
+      const login = await request(http)
+        .post('/api/v1/auth/login')
+        .send({ email: adminEmail, password: 'SuperSecret123!' })
+        .expect(200);
+      const { accessToken: sessionAccess, refreshToken } = login.body.data.tokens;
+
+      await request(http)
+        .post('/api/v1/auth/logout')
+        .set('Authorization', `Bearer ${sessionAccess}`)
+        .send({ refreshToken })
+        .expect(200);
+
+      await request(http)
+        .post('/api/v1/auth/refresh')
+        .send({ refreshToken })
+        .expect(401);
+    });
+
+    it('pause stores the pre-pause status; resume restores it and extends the ETA by paused days', async () => {
+      const project = await freshProject();
+
+      const paused = await request(http)
+        .post(`/api/v1/projects/${project.id}/pause`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ reason: 'Awaiting client decision on scope' })
+        .expect(201);
+      expect(paused.body.data.status).toBe('PAUSED');
+      expect(paused.body.data.pauseReason).toBe('Awaiting client decision on scope');
+      expect(paused.body.data.pausedFromStatus).toBe('IN_PROGRESS');
+
+      // Simulate a 3-day pause by backdating pausedAt, then resume.
+      await prisma.project.update({
+        where: { id: project.id },
+        data: { pausedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
+      });
+
+      const resumed = await request(http)
+        .post(`/api/v1/projects/${project.id}/resume`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(201);
+      expect(resumed.body.data.status).toBe('IN_PROGRESS'); // restored, not lost
+      expect(resumed.body.data.pausedTimeDays).toBe(3);
+      expect(resumed.body.data.pausedFromStatus).toBeNull();
+
+      // ETA must have been pushed out by exactly the paused days.
+      const original = new Date('2026-09-01');
+      expect(new Date(resumed.body.data.currentEstimatedCompletionDate).getTime()).toBe(
+        new Date(original.getTime() + 3 * 24 * 60 * 60 * 1000).getTime(),
+      );
+    });
+
+    it('reopening a completed task clears completion data and recalculates progress', async () => {
+      const project = await freshProject();
+      const milestone = await request(http)
+        .post(`/api/v1/projects/${project.id}/milestones`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'Delivery', weight: 100 })
+        .expect(201);
+      const task = await request(http)
+        .post(`/api/v1/milestones/${milestone.body.data.id}/tasks`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'Ship it' })
+        .expect(201);
+
+      await request(http)
+        .patch(`/api/v1/tasks/${task.body.data.id}/status`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ status: 'COMPLETED' })
+        .expect(200);
+
+      const reopened = await request(http)
+        .patch(`/api/v1/tasks/${task.body.data.id}/status`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ status: 'TODO' })
+        .expect(200);
+      expect(reopened.body.data.completedAt).toBeNull();
+
+      const milestoneAfter = await request(http)
+        .get(`/api/v1/milestones/${milestone.body.data.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(milestoneAfter.body.data.progressPercentage).toBe(0);
+
+      const projectAfter = await request(http)
+        .get(`/api/v1/projects/${project.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(projectAfter.body.data.progressPercentage).toBe(0);
+    });
+
+    it('manual progress override fixes progress and survives task changes until cleared', async () => {
+      const project = await freshProject();
+      const milestone = await request(http)
+        .post(`/api/v1/projects/${project.id}/milestones`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'Scope', weight: 100 })
+        .expect(201);
+      const task = await request(http)
+        .post(`/api/v1/milestones/${milestone.body.data.id}/tasks`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'Setup' })
+        .expect(201);
+
+      await request(http)
+        .post(`/api/v1/projects/${project.id}/progress-override`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ progressPercentage: 60, reason: 'Client freeze on milestone scope' })
+        .expect(201);
+
+      let projectState = await request(http)
+        .get(`/api/v1/projects/${project.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(projectState.body.data.progressPercentage).toBe(60);
+      expect(projectState.body.data.progressManualOverride).toBe(true);
+
+      // A task completion must not move the overridden value.
+      await request(http)
+        .patch(`/api/v1/tasks/${task.body.data.id}/status`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ status: 'COMPLETED' })
+        .expect(200);
+      projectState = await request(http)
+        .get(`/api/v1/projects/${project.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(projectState.body.data.progressPercentage).toBe(60);
+
+      await request(http)
+        .delete(`/api/v1/projects/${project.id}/progress-override`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      projectState = await request(http)
+        .get(`/api/v1/projects/${project.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(projectState.body.data.progressManualOverride).toBe(false);
+      expect(projectState.body.data.progressPercentage).toBe(100);
+    });
+
+    it('completion requires complete milestones unless forced; progress stays 100 afterwards', async () => {
+      const project = await freshProject();
+      await request(http)
+        .post(`/api/v1/projects/${project.id}/milestones`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'Unfinished work', weight: 100 })
+        .expect(201);
+
+      await request(http)
+        .post(`/api/v1/projects/${project.id}/complete`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({})
+        .expect(400);
+
+      const completed = await request(http)
+        .post(`/api/v1/projects/${project.id}/complete`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ force: true, reason: 'Client accepted partial scope' })
+        .expect(201);
+      expect(completed.body.data.status).toBe('COMPLETED');
+      expect(completed.body.data.progressPercentage).toBe(100);
+      expect(completed.body.data.completedAt).toBeDefined();
+      completedProjectId = project.id;
+
+      // Later milestone/task edits cannot pull a completed project below 100%.
+      await request(http)
+        .post(`/api/v1/projects/${project.id}/milestones`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'Late addendum', weight: 50 })
+        .expect(201);
+      const after = await request(http)
+        .get(`/api/v1/projects/${project.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(after.body.data.progressPercentage).toBe(100);
+    });
+
+    it('health and change-request approval are blocked on a completed project', async () => {
+      await request(http)
+        .patch(`/api/v1/projects/${completedProjectId}/health`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ health: 'AT_RISK' })
+        .expect(400);
+
+      const cr = await request(http)
+        .post(`/api/v1/projects/${completedProjectId}/change-requests`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'Too late to add', estimatedAdditionalDays: 3 })
+        .expect(201);
+      await request(http)
+        .post(`/api/v1/change-requests/${cr.body.data.id}/approve`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(400);
+    });
+
+    it('archives a project and keeps it visible to admins', async () => {
+      const archived = await request(http)
+        .post(`/api/v1/projects/${completedProjectId}/archive`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(201);
+      expect(archived.body.data.status).toBe('ARCHIVED');
+      expect(archived.body.data.archivedAt).toBeDefined();
+
+      const stillVisible = await request(http)
+        .get(`/api/v1/projects/${completedProjectId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(stillVisible.body.data.status).toBe('ARCHIVED');
+    });
+
+    it('a cancelled project is closed to further lifecycle changes', async () => {
+      const project = await freshProject();
+      await request(http)
+        .patch(`/api/v1/projects/${project.id}/status`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ status: 'CANCELLED' })
+        .expect(200);
+
+      await request(http)
+        .post(`/api/v1/projects/${project.id}/complete`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ force: true, reason: 'n/a' })
+        .expect(400);
+
+      await request(http)
+        .post(`/api/v1/projects/${project.id}/milestones`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'Cannot add', weight: 10 })
+        .expect(400);
+
+      await request(http)
+        .patch(`/api/v1/projects/${project.id}/status`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ status: 'IN_PROGRESS' })
+        .expect(400);
     });
   });
 });

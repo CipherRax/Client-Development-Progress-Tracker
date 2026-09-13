@@ -25,9 +25,9 @@ export class CreateChangeRequestDto {
   @MaxLength(150)
   requestedBy?: string;
 
-  @ApiProperty({ description: 'Estimated additional days this change will add if approved.' })
+  @ApiProperty({ description: 'Estimated additional days this change will add if approved. Must be at least 1.' })
   @IsInt()
-  @Min(0)
+  @Min(1)
   estimatedAdditionalDays: number;
 
   @ApiPropertyOptional({ description: 'Estimated additional hours of work.' })

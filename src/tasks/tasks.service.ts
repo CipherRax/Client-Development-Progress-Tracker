@@ -21,6 +21,7 @@ export class TasksService {
 
   async create(milestoneId: string, dto: CreateTaskDto) {
     const milestone = await this.milestonesService.getMilestoneOrThrow(milestoneId);
+    await this.projectsService.assertProjectMutable(milestone.projectId);
 
     let order = dto.order;
     if (order === undefined) {
@@ -80,9 +81,12 @@ export class TasksService {
   async update(id: string, dto: UpdateTaskDto) {
     const task = await this.getTaskOrThrow(id);
     const milestone = await this.milestonesService.getMilestoneOrThrow(task.milestoneId);
+    await this.projectsService.assertProjectMutable(milestone.projectId);
 
     const becomingCompleted =
       dto.status === TaskStatus.COMPLETED && task.status !== TaskStatus.COMPLETED;
+    const leavingCompleted =
+      task.status === TaskStatus.COMPLETED && dto.status !== TaskStatus.COMPLETED;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const result = await tx.task.update({
@@ -96,7 +100,7 @@ export class TasksService {
           estimatedHours: dto.estimatedHours,
           actualHours: dto.actualHours,
           clientVisible: dto.clientVisible,
-          completedAt: becomingCompleted ? new Date() : undefined,
+          completedAt: becomingCompleted ? new Date() : leavingCompleted ? null : undefined,
         },
       });
 
@@ -121,15 +125,22 @@ export class TasksService {
   async updateStatus(id: string, dto: UpdateTaskStatusDto) {
     const task = await this.getTaskOrThrow(id);
     const milestone = await this.milestonesService.getMilestoneOrThrow(task.milestoneId);
+    await this.projectsService.assertProjectMutable(milestone.projectId);
     const becomingCompleted =
       dto.status === TaskStatus.COMPLETED && task.status !== TaskStatus.COMPLETED;
+    const leavingCompleted =
+      task.status === TaskStatus.COMPLETED && dto.status !== TaskStatus.COMPLETED;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const result = await tx.task.update({
         where: { id },
         data: {
           status: dto.status,
-          completedAt: becomingCompleted ? new Date() : task.completedAt,
+          completedAt: becomingCompleted
+            ? new Date()
+            : leavingCompleted
+              ? null
+              : task.completedAt,
         },
       });
 
@@ -154,6 +165,7 @@ export class TasksService {
   async remove(id: string) {
     const task = await this.getTaskOrThrow(id);
     const milestone = await this.milestonesService.getMilestoneOrThrow(task.milestoneId);
+    await this.projectsService.assertProjectMutable(milestone.projectId);
 
     await this.prisma.$transaction(async (tx) => {
       await tx.task.delete({ where: { id } });
@@ -187,6 +199,14 @@ export class TasksService {
     tx: any,
   ) {
     const milestone = await tx.milestone.findUniqueOrThrow({ where: { id: milestoneId } });
+
+    // A COMPLETED or SKIPPED milestone is final — its progress must never be
+    // recomputed from task changes after the fact.
+    if (milestone.status === 'COMPLETED' || milestone.status === 'SKIPPED') {
+      await this.projectsService.recalculateProjectProgress(projectId, tx);
+      return;
+    }
+
     const tasks = await tx.task.findMany({ where: { milestoneId } });
     const progressPercentage = this.progressCalc.calculateMilestoneProgress(
       tasks,
