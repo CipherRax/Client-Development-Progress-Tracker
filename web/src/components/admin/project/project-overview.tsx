@@ -17,7 +17,7 @@ export function ProjectOverview({ project }: { project: ProjectDetail }) {
   return (
     <div className="flex flex-col gap-6">
       {/* Progress banner */}
-      <div className="flex flex-wrap items-center gap-6 rounded-md border border-line bg-white p-6 dark:bg-panel">
+      <div className="flex flex-wrap items-center gap-6 rounded-lg border border-white/[0.08] bg-white/[0.04] p-6 backdrop-blur-xl">
         <ProgressRing value={project.progressPercentage} size={110} stroke={9} labelClassName="!text-xl" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -51,7 +51,7 @@ export function ProjectOverview({ project }: { project: ProjectDetail }) {
       <StatusControls project={project} />
 
       {/* Estimate timeline */}
-      <div className="rounded-md border border-line bg-white p-6 dark:bg-panel">
+      <div className="rounded-lg border border-white/[0.08] bg-white/[0.04] p-6 backdrop-blur-xl">
         <div className="mb-4 flex items-center gap-2">
           <CalendarClock className="size-4 text-brand" />
           <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-ink/60 dark:text-zinc-400">
@@ -91,7 +91,7 @@ export function ProjectOverview({ project }: { project: ProjectDetail }) {
       </div>
 
       {project.currentWork && project.currentWork.length > 0 && (
-        <div className="rounded-md border border-line bg-white p-6 dark:bg-panel">
+        <div className="rounded-lg border border-white/[0.08] bg-white/[0.04] p-6 backdrop-blur-xl">
           <h3 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-ink/60 dark:text-zinc-400">
             <Hammer className="size-4 text-brand" /> Focus right now
           </h3>
@@ -125,7 +125,7 @@ function Fact({
   mono?: boolean;
 }) {
   return (
-    <div className="rounded-md border border-line bg-white p-4 dark:bg-panel">
+    <div className="rounded-lg border border-white/[0.08] bg-white/[0.04] p-4 backdrop-blur-xl">
       <p className="text-xs uppercase tracking-wide text-ink/50 dark:text-zinc-500">{label}</p>
       <p className={`mt-1 truncate text-sm font-semibold ${mono ? 'font-mono' : 'font-display'}`}>{value}</p>
       {sub && <p className="mt-0.5 truncate text-xs text-ink/45 dark:text-zinc-500">{sub}</p>}

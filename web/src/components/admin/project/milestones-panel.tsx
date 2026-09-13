@@ -115,7 +115,7 @@ function MilestoneRow({ projectId, milestone }: { projectId: string; milestone: 
   const deleteM = useDeleteMilestone(projectId);
 
   return (
-    <div className="rounded-md border border-line bg-white dark:bg-panel">
+    <div className="rounded-lg border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl">
       <div className="flex flex-wrap items-center gap-3 p-4">
         <span className="text-ink/25 dark:text-zinc-600"><GripVertical className="size-4" /></span>
         <CircleDot className={`size-4 ${milestone.status === 'IN_PROGRESS' ? 'text-sky-500' : milestone.status === 'COMPLETED' ? 'text-success' : 'text-ink/30 dark:text-zinc-500'}`} />

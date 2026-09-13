@@ -32,8 +32,9 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-ink/60 dark:text-zinc-400">A live pulse of every project in the studio.</p>
+          <p className="font-mono text-[11px] font-medium uppercase tracking-[0.25em] text-brand/70">live pulse</p>
+          <h1 className="text-glow mt-1 font-display text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="mt-1 text-sm text-zinc-400">A live pulse of every project in the studio.</p>
         </div>
         <Link href="/projects/new">
           <Button>
@@ -52,7 +53,7 @@ export default function DashboardPage() {
 
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-ink/60 dark:text-zinc-400">
+          <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
             Recently updated
           </h2>
           <Link
@@ -76,20 +77,20 @@ export default function DashboardPage() {
             }
           />
         ) : (
-          <div className="flex flex-col divide-y divide-line overflow-hidden rounded-md border border-line bg-white dark:bg-panel">
+          <div className="flex flex-col divide-y divide-white/[0.06] overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl">
             {recentlyUpdated.map((p) => (
               <Link
                 key={p.id}
                 href={`/projects/${p.id}`}
-                className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
+                className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-white/[0.04]"
               >
                 <ProgressRing value={p.progressPercentage} size={44} stroke={4} labelClassName="!text-[9px]" />
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 truncate font-display text-sm font-semibold">
                     <span className="truncate">{p.name}</span>
-                    <span className="font-mono text-[10px] uppercase tracking-wide text-ink/40 dark:text-zinc-500">{p.projectCode}</span>
+                    <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">{p.projectCode}</span>
                   </p>
-                  <p className="mt-0.5 text-xs text-ink/50 dark:text-zinc-500">
+                  <p className="mt-0.5 text-xs text-zinc-500">
                     ETA {formatShortDate(p.currentEstimatedCompletionDate)} · {p.currentEstimatedDuration}d
                   </p>
                 </div>
@@ -97,7 +98,7 @@ export default function DashboardPage() {
                   <StatusPill status={p.status} />
                   <HealthPill health={p.health} />
                 </div>
-                <ArrowRight className="size-4 shrink-0 text-ink/30 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
+                <ArrowRight className="size-4 shrink-0 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
               </Link>
             ))}
           </div>

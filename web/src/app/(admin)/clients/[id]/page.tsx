@@ -33,17 +33,18 @@ export default function ClientDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/clients" className="inline-flex w-fit items-center gap-1 text-sm text-ink/60 hover:text-brand dark:text-zinc-400">
+      <Link href="/clients" className="inline-flex w-fit items-center gap-1 text-sm text-zinc-400 transition-colors hover:text-brand">
         <ChevronLeft className="size-4" /> Back to clients
       </Link>
 
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="font-display text-2xl font-bold tracking-tight">{client.name}</h1>
+          <p className="font-mono text-[11px] font-medium uppercase tracking-[0.25em] text-brand/70">client profile</p>
+          <div className="mt-1 flex items-center gap-3">
+            <h1 className="text-glow font-display text-2xl font-bold tracking-tight">{client.name}</h1>
             <ClientStatusPill status={client.status} />
           </div>
-          <p className="mt-1 text-sm text-ink/60 dark:text-zinc-400">
+          <p className="mt-1 text-sm text-zinc-400">
             {client.companyName || 'No company'} · added {formatLedgerDate(client.createdAt)}
           </p>
         </div>

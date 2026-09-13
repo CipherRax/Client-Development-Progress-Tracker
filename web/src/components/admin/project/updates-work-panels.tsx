@@ -9,7 +9,7 @@ import { useCreateUpdate, useDeleteUpdate, useUpdates } from '@/lib/hooks/use-mi
 import { useCurrentWork, useSetCurrentWork, useClearCurrentWork } from '@/lib/hooks/use-misc';
 import { UpdateVisibilityPill } from '@/components/shared/pills';
 import { Button } from '@/components/ui/button';
-import { Input, Textarea } from '@/components/ui/input';
+import { Input, Textarea, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/form';
 import { Dialog } from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/skeleton';
@@ -75,10 +75,10 @@ export function UpdatesPanel({ projectId }: { projectId: string }) {
             <Textarea rows={4} {...form.register('content')} />
           </Field>
           <Field label="Visibility" error={form.formState.errors.visibility}>
-            <select className="flex h-9 w-full appearance-none rounded-md border border-line bg-transparent px-3 py-1 text-sm" {...form.register('visibility')}>
+            <Select {...form.register('visibility')}>
               <option value="PUBLIC">Public (visible to client)</option>
               <option value="INTERNAL">Internal only</option>
-            </select>
+            </Select>
           </Field>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>

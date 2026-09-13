@@ -40,7 +40,7 @@ export default function ProjectDetailPage() {
   if (isError) {
     return (
       <div className="flex flex-col gap-4">
-        <Link href="/projects" className="inline-flex w-fit items-center gap-1 text-sm text-ink/60 hover:text-brand dark:text-zinc-400">
+        <Link href="/projects" className="inline-flex w-fit items-center gap-1 text-sm text-zinc-400 hover:text-brand">
           <ChevronLeft className="size-4" /> Back to projects
         </Link>
         <ErrorState description={error?.message} onRetry={() => refetch()} />
@@ -62,26 +62,26 @@ export default function ProjectDetailPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link href="/projects" className="inline-flex w-fit items-center gap-1 text-sm text-ink/60 hover:text-brand dark:text-zinc-400">
+        <Link href="/projects" className="inline-flex w-fit items-center gap-1 text-sm text-zinc-400 transition-colors hover:text-brand">
           <ChevronLeft className="size-4" /> Back to projects
         </Link>
-        <button type="button" onClick={() => router.refresh()} className="text-xs font-medium text-ink/40 hover:text-brand dark:text-zinc-500">
+        <button type="button" onClick={() => router.refresh()} className="font-mono text-[11px] font-medium uppercase tracking-[0.15em] text-zinc-500 transition-colors hover:text-brand">
           Refresh
         </button>
       </div>
 
       {/* Tab bar */}
-      <div className="flex flex-wrap gap-1 border-b border-line pb-px">
+      <div className="flex flex-wrap gap-1 rounded-xl border border-white/[0.08] bg-white/[0.03] p-1 backdrop-blur-xl">
         {TABS.map(({ id, Icon }) => (
           <button
             key={id}
             type="button"
             onClick={() => setTab(id)}
             className={cn(
-              'inline-flex items-center gap-2 rounded-t-[3px] border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+              'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
               tab === id
-                ? 'border-brand text-brand-strong dark:text-brand'
-                : 'border-transparent text-ink/60 dark:text-zinc-400 hover:text-ink dark:hover:text-white',
+                ? 'bg-brand/15 text-brand shadow-[0_0_18px_rgba(45,212,191,0.15)]'
+                : 'text-zinc-400 hover:bg-white/[0.06] hover:text-white',
             )}
             aria-current={tab === id ? 'page' : undefined}
           >

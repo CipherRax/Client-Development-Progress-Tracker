@@ -15,14 +15,14 @@ export function StatCard({
 }) {
   const accentClass =
     accent === 'brand'
-      ? 'text-brand-strong dark:text-brand'
+      ? 'text-brand'
       : accent === 'amber'
         ? 'text-amber'
         : accent === 'danger'
           ? 'text-danger'
           : accent === 'success'
             ? 'text-success'
-            : 'text-ink dark:text-white';
+            : 'text-white';
   const barClass =
     accent === 'brand'
       ? 'from-brand to-brand-strong'
@@ -35,13 +35,13 @@ export function StatCard({
             : 'from-line to-transparent';
   return (
     <div className={cn(
-      'relative overflow-hidden rounded-lg border border-line bg-white p-5 shadow-sm transition-all hover:shadow-md dark:bg-panel dark:hover:shadow-black/30',
+      'relative overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.04] p-5 shadow-[0_2px_24px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all hover:border-brand/40 hover:shadow-[0_0_28px_rgba(45,212,191,0.12)]',
       className,
     )}>
       <div aria-hidden className={cn('absolute inset-x-0 top-0 h-px bg-gradient-to-r', barClass)} />
-      <p className="text-xs font-medium uppercase tracking-wide text-ink/50 dark:text-zinc-500">{label}</p>
-      <p className={cn('mt-2 font-mono text-3xl font-semibold font-mono-num', accentClass)}>{value}</p>
-      {hint && <p className="mt-1 text-xs text-ink/50 dark:text-zinc-500">{hint}</p>}
+      <p className="font-mono text-[11px] font-medium uppercase tracking-[0.15em] text-zinc-500">{label}</p>
+      <p className={cn('mt-2 font-mono text-3xl font-semibold font-mono-num text-glow', accentClass)}>{value}</p>
+      {hint && <p className="mt-1 text-xs text-zinc-500">{hint}</p>}
     </div>
   );
 }

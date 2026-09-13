@@ -19,8 +19,9 @@ export default function ClientsPage() {
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Clients</h1>
-          <p className="text-sm text-ink/60 dark:text-zinc-400">Everyone you build for.</p>
+          <p className="font-mono text-[11px] font-medium uppercase tracking-[0.25em] text-brand/70">client registry</p>
+          <h1 className="text-glow mt-1 font-display text-2xl font-bold tracking-tight">Clients</h1>
+          <p className="mt-1 text-sm text-zinc-400">Everyone you build for.</p>
         </div>
         <div className="flex items-center gap-3">
           <Input
@@ -48,17 +49,17 @@ export default function ClientsPage() {
           <Link
             key={c.id}
             href={`/clients/${c.id}`}
-            className="group rounded-md border border-line bg-white p-5 transition-colors hover:border-brand/50 dark:bg-panel"
+            className="group rounded-lg border border-white/[0.08] bg-white/[0.04] p-5 backdrop-blur-xl transition-all hover:border-brand/40 hover:shadow-[0_0_28px_rgba(45,212,191,0.12)]"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate font-display text-base font-semibold">{c.name}</p>
-                {c.companyName && <p className="truncate text-xs text-ink/50 dark:text-zinc-500">{c.companyName}</p>}
+                <p className="truncate font-display text-base font-semibold text-white">{c.name}</p>
+                {c.companyName && <p className="truncate text-xs text-zinc-500">{c.companyName}</p>}
               </div>
               <ClientStatusPill status={c.status} />
             </div>
-            <p className="mt-3 truncate text-sm text-ink/60 dark:text-zinc-400">{c.email}</p>
-            <p className="mt-1 text-xs text-ink/40 dark:text-zinc-500">{c.phone || 'No phone on file'}</p>
+            <p className="mt-3 truncate text-sm text-zinc-400">{c.email}</p>
+            <p className="mt-1 text-xs text-zinc-500">{c.phone || 'No phone on file'}</p>
           </Link>
         ))}
         {data && data.clients.length === 0 && (

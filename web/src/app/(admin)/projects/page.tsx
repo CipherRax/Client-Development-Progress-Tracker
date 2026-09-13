@@ -32,8 +32,9 @@ export default function ProjectsPage() {
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Projects</h1>
-          <p className="text-sm text-ink/60 dark:text-zinc-400">Track progress, health and estimates.</p>
+          <p className="font-mono text-[11px] font-medium uppercase tracking-[0.25em] text-brand/70">project ledger</p>
+          <h1 className="text-glow mt-1 font-display text-2xl font-bold tracking-tight">Projects</h1>
+          <p className="mt-1 text-sm text-zinc-400">Track progress, health and estimates.</p>
         </div>
         <Link href="/projects/new">
           <Button><Plus /> New project</Button>
@@ -54,7 +55,7 @@ export default function ProjectsPage() {
         </Select>
       </div>
 
-      <div className="overflow-hidden rounded-md border border-line bg-white dark:bg-panel">
+      <div className="overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl">
         {isLoading && <LoadingRows rows={8} />}
         {isError && <ErrorState description={error?.message} onRetry={() => refetch()} />}
         {data && data.projects.length === 0 && (
@@ -66,16 +67,16 @@ export default function ProjectsPage() {
             }
           />
         )}
-        <div className="flex flex-col divide-y divide-line">
+        <div className="flex flex-col divide-y divide-white/[0.06]">
           {data?.projects.map((p) => (
-            <Link key={p.id} href={`/projects/${p.id}`} className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-black/[0.02] dark:hover:bg-white/[0.03]">
+            <Link key={p.id} href={`/projects/${p.id}`} className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-white/[0.04]">
               <ProgressRing value={p.progressPercentage} size={44} stroke={4} labelClassName="!text-[9px]" />
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-2 truncate font-display text-sm font-semibold">
                   <span className="truncate">{p.name}</span>
-                  <span className="font-mono text-[10px] uppercase tracking-wide text-ink/40 dark:text-zinc-500">{p.projectCode}</span>
+                  <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">{p.projectCode}</span>
                 </p>
-                <p className="mt-0.5 text-xs text-ink/50 dark:text-zinc-500">
+                <p className="mt-0.5 text-xs text-zinc-500">
                   Started {formatShortDate(p.startDate)} · ETA {formatShortDate(p.currentEstimatedCompletionDate)}
                 </p>
               </div>
