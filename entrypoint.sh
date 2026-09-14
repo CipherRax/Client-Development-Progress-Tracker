@@ -7,14 +7,14 @@ PUBLIC_PORT="${PORT:-3000}"
 export PORT=3000
 
 echo "[entrypoint] Running database migrations..."
-npx prisma migrate deploy
+node /app/node_modules/prisma/build/index.js migrate deploy
 
 echo "[entrypoint] Starting NestJS API on internal port 3000..."
 node dist/main.js &
 BACKEND_PID=$!
 
 echo "[entrypoint] Starting Next.js dashboard on public port ${PUBLIC_PORT}..."
-cd /app/web/standalone/web
+cd /app/web/app
 PORT="$PUBLIC_PORT" HOSTNAME=0.0.0.0 node server.js &
 FRONTEND_PID=$!
 

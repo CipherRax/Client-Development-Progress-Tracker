@@ -44,17 +44,31 @@ RUN npm run build
 FROM base AS production
 ENV NODE_ENV=production
 
-# Backend production dependencies + Prisma
+# Backend runtime deps (Prisma client, no CLI — CLI is copied below)
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 RUN npm ci --omit=dev
+
+# Prisma CLI + engines are dev-only deps, but we need `migrate deploy` at
+# runtime. Copy the already-downloaded/generated artifacts so the container
+# never needs to reach binaries.prisma.sh or the npm registry on boot.
+COPY --from=backend-prisma /app/node_modules/prisma ./node_modules/prisma
+COPY --from=backend-prisma /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=backend-prisma /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=backend-build /app/dist ./dist
 
-# Frontend standalone runtime (+ static assets).
-# Next 15 nests the standalone server under a <package-name> folder.
-COPY --from=web-build /app/web/.next/standalone ./web/standalone
-COPY --from=web-build /app/web/.next/static ./web/standalone/web/.next/static
+# Frontend standalone runtime. The server.js entry point can be nested at
+# different depths depending on the build environment, so flatten it to the
+# canonical /app/web/app for the entrypoint script.
+COPY --from=web-build /app/web/.next/standalone ./web/standalone-src
+COPY --from=web-build /app/web/.next/static ./web/static-src
+RUN SRV="$(find /app/web/standalone-src -maxdepth 3 -name server.js | head -1)" \
+    && [ -n "$SRV" ] \
+    && mkdir -p /app/web/app \
+    && cp -R "$(dirname "$SRV")"/. /app/web/app/ \
+    && mkdir -p /app/web/app/.next \
+    && cp -R /app/web/static-src/. /app/web/app/.next/static/ \
+    && rm -rf /app/web/standalone-src /app/web/static-src
 
 COPY entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
