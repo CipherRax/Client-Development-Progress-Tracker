@@ -1,7 +1,10 @@
-// Next.js 15 configuration for the Trackly web app.
-import type { NextConfig } from 'next';
+// Next.js configuration for the Trackly web app.
+//
+// Plain .mjs (not TypeScript) so the production server (next start) can load
+// it without requiring the typescript package at runtime.
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   // The public dashboard runs entirely client-side once tokens are validated;
@@ -10,8 +13,6 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  // Self-contained server so the whole app can ship in a single Docker image.
-  output: 'standalone',
   // In production the Next.js server and the NestJS API run side by side in
   // the same container. The frontend talks to the API through the same origin
   // and Next proxies /api/* to the backend service (BACKEND_INTERNAL_URL).

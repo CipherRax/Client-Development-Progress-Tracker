@@ -32,6 +32,12 @@ COPY web/package.json web/package-lock.json ./
 COPY web/shims ./shims
 RUN npm ci
 
+FROM base AS web-prod
+WORKDIR /app/web
+COPY web/package.json web/package-lock.json ./
+COPY web/shims ./shims
+RUN npm ci --omit=dev
+
 FROM base AS web-build
 WORKDIR /app/web
 COPY --from=web-deps /app/web/node_modules ./node_modules
@@ -57,18 +63,13 @@ COPY --from=backend-prisma /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=backend-prisma /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=backend-build /app/dist ./dist
 
-# Frontend standalone runtime. The server.js entry point can be nested at
-# different depths depending on the build environment, so flatten it to the
-# canonical /app/web/app for the entrypoint script.
-COPY --from=web-build /app/web/.next/standalone ./web/standalone-src
-COPY --from=web-build /app/web/.next/static ./web/static-src
-RUN SRV="$(find /app/web/standalone-src -maxdepth 3 -name server.js | head -1)" \
-    && [ -n "$SRV" ] \
-    && mkdir -p /app/web/app \
-    && cp -R "$(dirname "$SRV")"/. /app/web/app/ \
-    && mkdir -p /app/web/app/.next \
-    && cp -R /app/web/static-src/. /app/web/app/.next/static/ \
-    && rm -rf /app/web/standalone-src /app/web/static-src
+# Frontend runtime: production node_modules + the compiled .next output.
+# We serve via `next start` (not standalone) because the standalone trace's
+# pruned node_modules is unreliable across build environments.
+COPY --from=web-prod /app/web/node_modules ./web/node_modules
+COPY --from=web-build /app/web/.next ./web/.next
+COPY --from=web-build /app/web/package.json ./web/package.json
+COPY --from=web-build /app/web/next.config.mjs ./web/next.config.mjs
 
 COPY entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh

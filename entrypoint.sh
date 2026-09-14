@@ -14,8 +14,8 @@ node dist/main.js &
 BACKEND_PID=$!
 
 echo "[entrypoint] Starting Next.js dashboard on public port ${PUBLIC_PORT}..."
-cd /app/web/app
-PORT="$PUBLIC_PORT" HOSTNAME=0.0.0.0 node server.js &
+cd /app/web
+PORT="$PUBLIC_PORT" HOSTNAME=0.0.0.0 node ./node_modules/next/dist/bin/next start &
 FRONTEND_PID=$!
 
 trap 'kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true' TERM INT
