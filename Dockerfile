@@ -62,6 +62,6 @@ RUN chmod +x ./entrypoint.sh
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD-SHELL wget --no-verbose --tries=1 --spider "http://localhost:${PORT:-3000}/api/docs" || exit 1
+  CMD wget --no-verbose --tries=1 --spider "http://localhost:${PORT:-3000}/api/docs" || exit 1
 
 CMD ["sh", "./entrypoint.sh"]
