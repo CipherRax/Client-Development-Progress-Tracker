@@ -10,6 +10,15 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  // Self-contained server so the whole app can ship in a single Docker image.
+  output: 'standalone',
+  // In production the Next.js server and the NestJS API run side by side in
+  // the same container. The frontend talks to the API through the same origin
+  // and Next proxies /api/* to the backend service (BACKEND_INTERNAL_URL).
+  async rewrites() {
+    const backend = process.env.BACKEND_INTERNAL_URL ?? 'http://127.0.0.1:3000';
+    return [{ source: '/api/:path*', destination: `${backend}/api/:path*` }];
+  },
 };
 
 export default nextConfig;

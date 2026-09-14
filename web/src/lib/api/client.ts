@@ -18,7 +18,11 @@ export class ApiError extends Error {
   }
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+// Default to same-origin /api/v1 so the app works when served from the same
+// container as the backend (Next proxies /api/* to NestJS). Override with
+// NEXT_PUBLIC_API_URL when the API is hosted elsewhere (e.g. local dev).
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+const BASE_URL = configuredApiUrl ? configuredApiUrl.replace(/\/+$/, '') : '/api/v1';
 
 // Single-flight refresh: concurrent 401s share one refresh attempt.
 let refreshInFlight: Promise<boolean> | null = null;
